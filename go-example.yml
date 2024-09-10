@@ -1,52 +1,71 @@
-name: Go Example Workflow
+name: Go Build Workflow
 
 on:
   push:
     branches:
-      
-main
-schedule:
-cron: '/15 * * 1-6'  # Scheduler para cada 15 minutos, de segunda a sábado
+      - main
+  schedule:
+    - cron: '*/15 * * * 1-6'
 
 jobs:
   build-go:
     runs-on: ubuntu-latest
+    env:
+      FILE_NAME: hello-server
     steps:
-      
-name: Check out the repo  # Primeiro passo: baixar o repositório
-      uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      
-name: Set up Go environment  # Configurar o ambiente Go
-      uses: actions/setup-go@v3
-      with:
-        go-version: '1.16'  # Especificar a versão do Go
+      - name: Build for Linux
+        run: go build ${{ env.FILE_NAME }}.go
 
-      
-name: Build project  # Comando para compilar o projeto
-      run: go build -o linux ./...
+      - name: Build for Windows
+        run: GOOS=windows GOARCH=amd64 go build ${{ env.FILE_NAME }}.go
 
-      
-name: Upload Linux artifact  # Fazer upload do artefato gerado
-      uses: actions/upload-artifact@v3
-      with:
-        name: linux
-        path: ./linux  # Caminho do artefato gerado
+      - name: Upload artifact for Linux
+        uses: actions/upload-artifact@v1.0.0
+        with:
+          name: linux
+          path: ./${{ env.FILE_NAME }}
+
+      - name: Upload artifact for Windows
+        uses: actions/upload-artifact@v1.0.0
+        with:
+          name: windows
+          path: ./${{ env.FILE_NAME }}.exe
 
   download-and-run-linux:
-    needs: build-go  # O job 'download-and-run-linux' só inicia após o 'build-go' ser concluído
-    runs-on: ubuntu-latest  # Utiliza o Ubuntu como runner
+    runs-on: ubuntu-latest
+    needs: build-go
     steps:
-      
-name: Check out the repo  # Primeiro passo: baixar o repositório
-      uses: actions/checkout@v3
+      - name: Checkout Repository
+        uses: actions/checkout@v3
 
-      
-name: Download Linux artifact  # Segundo passo: baixar o artefato gerado no build-go
-      uses: actions/download-artifact@v3
-      with:
-        name: linux  # Nome do artefato que foi gerado durante o job 'build-go'
+      - name: Download Linux Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: linux
 
-      
-name: Execute the script on Linux  # Terceiro passo: executar o script run.sh
-      run: source ./run.sh  # Comando para rodar o script no Linux
+      - name: List files in current directory
+        run: ls -la
+
+      - name: Make run.sh executable
+        run: chmod +x ./run.sh
+
+      - name: Run Script
+        run: ./run.sh
+
+  download-only-windows:
+    runs-on: windows-latest
+    needs: build-go
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+
+      - name: Download Windows Artifact
+        uses: actions/download-artifact@v2
+        with:
+          name: windows
+
+      - name: List files in current directory
+        run: dir
