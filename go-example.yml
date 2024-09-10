@@ -1,0 +1,52 @@
+name: Go Example Workflow
+
+on:
+  push:
+    branches:
+      
+main
+schedule:
+cron: '/15 * * 1-6'  # Scheduler para cada 15 minutos, de segunda a sábado
+
+jobs:
+  build-go:
+    runs-on: ubuntu-latest
+    steps:
+      
+name: Check out the repo  # Primeiro passo: baixar o repositório
+      uses: actions/checkout@v3
+
+      
+name: Set up Go environment  # Configurar o ambiente Go
+      uses: actions/setup-go@v3
+      with:
+        go-version: '1.16'  # Especificar a versão do Go
+
+      
+name: Build project  # Comando para compilar o projeto
+      run: go build -o linux ./...
+
+      
+name: Upload Linux artifact  # Fazer upload do artefato gerado
+      uses: actions/upload-artifact@v3
+      with:
+        name: linux
+        path: ./linux  # Caminho do artefato gerado
+
+  download-and-run-linux:
+    needs: build-go  # O job 'download-and-run-linux' só inicia após o 'build-go' ser concluído
+    runs-on: ubuntu-latest  # Utiliza o Ubuntu como runner
+    steps:
+      
+name: Check out the repo  # Primeiro passo: baixar o repositório
+      uses: actions/checkout@v3
+
+      
+name: Download Linux artifact  # Segundo passo: baixar o artefato gerado no build-go
+      uses: actions/download-artifact@v3
+      with:
+        name: linux  # Nome do artefato que foi gerado durante o job 'build-go'
+
+      
+name: Execute the script on Linux  # Terceiro passo: executar o script run.sh
+      run: source ./run.sh  # Comando para rodar o script no Linux
